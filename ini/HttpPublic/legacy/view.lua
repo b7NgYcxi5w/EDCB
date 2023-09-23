@@ -14,7 +14,7 @@ audio2=(GetVarInt(query,'audio2',0,1) or 0)+(option.audioStartAt or 0)
 filter=GetVarInt(query,'cinema')==1 and option.filterCinema or option.filter or ''
 hls=GetVarInt(query,'hls',1)
 hls4=GetVarInt(query,'hls4',0) or 0
-caption=hls and GetVarInt(query,'caption')==1 and option.captionHls or option.captionNone or ''
+caption=hls and option.captionHls or option.captionNone or ''
 output=hls and option.outputHls or option.output
 n=GetVarInt(query,'n') or 0
 onid,tsid,sid=GetVarServiceID(query,'id')
@@ -27,6 +27,7 @@ if hls and not (ALLOW_HLS and option.outputHls) then
   onid=nil
 end
 psidata=GetVarInt(query,'psidata')==1
+jikkyo=GetVarInt(query,'jikkyo')==1
 hlsMsn=GetVarInt(query,'_HLS_msn',1)
 hlsPart=GetVarInt(query,'_HLS_part',0)
 
@@ -84,7 +85,7 @@ function OpenTranscoder(pipeName,searchName,nwtvclose,targetSID)
     if f then
       f:write(cmd..'\n\n')
       f:close()
-      cmd=cmd..' 2>>"'..log..'"'
+      cmd=cmd..' 2>>"'..log:gsub('[&%^]','^%0')..'"'
     end
   end
   if hls then
@@ -103,8 +104,12 @@ function OpenTranscoder(pipeName,searchName,nwtvclose,targetSID)
   elseif XCODE_BUF>0 then
     cmd=cmd..' | "'..asyncbuf..'" '..XCODE_BUF..' '..XCODE_PREPARE
   end
+
+  -- コマンドが対応していればffmpeg暴走回避のオプションをつける
+  local c5or1,stat,code=edcb.os.execute('"'..tsreadex..'" -n -1 -c 5 -h')
+  c5or1=(c5or1 or (stat=='exit' and code==2)) and 5 or 1
   -- "-z"はプロセス検索用
-  cmd='"'..tsreadex..'" -z edcb-legacy-'..searchName..' -t 10 -m 2 -x 18/38/39 -n '..(targetSID or -1)..' -a 9 -b 1 -c 1 -u 2 '..pipeName..' | '..cmd
+  cmd='"'..tsreadex..'" -z edcb-legacy-'..searchName..' -t 10 -m 2 -x 18/38/39 -n '..(targetSID or -1)..' -a 9 -b 1 -c '..c5or1..' -u 2 '..pipeName..' | '..cmd
   if hls then
     -- 極端に多く開けないようにする
     local indexCount=#(edcb.FindFile('\\\\.\\pipe\\tsmemseg_*_00',10) or {})
@@ -231,13 +236,13 @@ if onid then
     -- NetworkTVモードを終了
     edcb.CloseNetworkTV(n)
   elseif 0<=n and n<100 then
-    if hls and not psidata then
+    if hls and not psidata and not jikkyo then
       -- クエリのハッシュをキーとし、同一キーアクセスは出力中のインデックスファイルを返す
       segmentKey=mg.md5('view:'..hls..':nwtv'..n..':'..option.xcoder..':'..option.option..':'..audio2..':'..filter..':'..caption..':'..output[2])
       f=edcb.io.open('\\\\.\\pipe\\tsmemseg_'..segmentKey..'_00','rb')
     end
     if not f then
-      if psidata then
+      if psidata or jikkyo then
         ok,pid=edcb.IsOpenNetworkTV(n)
       else
         openTime=os.time()
@@ -269,9 +274,22 @@ if onid then
           end
           edcb.Sleep(200)
         end
-        if psidata then
+        if psidata or jikkyo then
           if pipeName then
-            f=OpenPsiDataArchiver(pipeName,sid)
+            f={}
+            if psidata then
+              f.psi=OpenPsiDataArchiver(pipeName,sid)
+              if not f.psi then
+                f=nil
+              end
+            end
+            if f and jikkyo then
+              f.jk=edcb.io.open('\\\\.\\pipe\\chat_d7b64ac2_'..pid,'r')
+              if not f.jk then
+                if f.psi then f.psi:close() end
+                f=nil
+              end
+            end
             fname='view.psc.txt'
           end
         else
@@ -290,21 +308,34 @@ elseif n and n<0 then
   -- プロセスが残っていたらすべて終わらせる
   edcb.os.execute('wmic process where "name=\'tsreadex.exe\' and commandline like \'% -z edcb-legacy-view-%\'" call terminate >nul')
 elseif n and n<=65535 then
-  if hls and not psidata then
+  if hls and not psidata and not jikkyo then
     -- クエリのハッシュをキーとし、同一キーアクセスは出力中のインデックスファイルを返す
     segmentKey=mg.md5('view:'..hls..':'..n..':'..option.xcoder..':'..option.option..':'..audio2..':'..filter..':'..caption..':'..output[2])
     f=edcb.io.open('\\\\.\\pipe\\tsmemseg_'..segmentKey..'_00','rb')
   end
   if not f then
-    if not psidata then
+    if not psidata and not jikkyo then
       -- 前回のプロセスが残っていたら終わらせる
       edcb.os.execute('wmic process where "name=\'tsreadex.exe\' and commandline like \'% -z edcb-legacy-view-'..n..' %\'" call terminate >nul')
     end
     -- 名前付きパイプがあれば開く
     ff=edcb.FindFile('\\\\.\\pipe\\SendTSTCP_'..n..'_*', 1)
     if ff and ff[1].name:find('^[A-Za-z]+_%d+_%d+$') then
-      if psidata then
-        f=OpenPsiDataArchiver('\\\\.\\pipe\\'..ff[1].name)
+      if psidata or jikkyo then
+        f={}
+        if psidata then
+          f.psi=OpenPsiDataArchiver('\\\\.\\pipe\\'..ff[1].name)
+          if not f.psi then
+            f=nil
+          end
+        end
+        if f and jikkyo then
+          f.jk=edcb.io.open('\\\\.\\pipe\\chat_d7b64ac2_'..ff[1].name:match('^[A-Za-z]+_%d+_(%d+)$'),'r')
+          if not f.jk then
+            if f.psi then f.psi:close() end
+            f=nil
+          end
+        end
         fname='view.psc.txt'
       else
         f=OpenTranscoder('\\\\.\\pipe\\'..ff[1].name,'view-'..n)
@@ -320,17 +351,36 @@ if not f then
     ..'<title>view.lua</title><p><a href="index.html">メニュー</a></p>')
   ct:Finish()
   mg.write(ct:Pop(Response(404,'text/html','utf-8',ct.len)..'\r\n'))
-elseif psidata then
+elseif psidata or jikkyo then
+  -- PSI/SI、実況、またはその混合データストリームを返す
   mg.write(Response(200,mg.get_mime_type(fname),'utf-8')..'Content-Disposition: filename='..fname..'\r\n\r\n')
   if mg.request_info.request_method~='HEAD' then
     trailerSize=0
     trailerRemainSize=0
-    while true do
-      buf,trailerSize,trailerRemainSize=ReadPsiDataChunk(f,trailerSize,trailerRemainSize)
-      if not buf or not mg.write(mg.base64_encode(buf)) then break end
-    end
+    baseTime=0
+    failed=false
+    repeat
+      -- 混合のときはPSI/SIのチャンクを3秒間隔で読む
+      if psidata then
+        buf,trailerSize,trailerRemainSize=ReadPsiDataChunk(f.psi,trailerSize,trailerRemainSize)
+        failed=not buf or not mg.write(mg.base64_encode(buf))
+        if failed then break end
+      end
+      if jikkyo then
+        repeat
+          -- 短い間隔(おおむね1秒以下)で読めることを仮定
+          buf=ReadJikkyoChunk(f.jk)
+          failed=not buf or not mg.write(buf)
+          if failed then break end
+          now=os.time()
+          if math.abs(baseTime-now)>10 then baseTime=now end
+        until now>=baseTime+3
+        baseTime=baseTime+3
+      end
+    until failed
   end
-  f:close()
+  if f.psi then f.psi:close() end
+  if f.jk then f.jk:close() end
 elseif hls then
   -- インデックスファイルを返す
   i=1

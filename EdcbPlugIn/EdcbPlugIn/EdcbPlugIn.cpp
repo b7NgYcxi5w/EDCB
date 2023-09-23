@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "EdcbPlugIn.h"
 #include "../../Common/StringUtil.h"
+#include "../../Common/TimeUtil.h"
 #include "../../Common/CommonDef.h"
 #include "../../Common/EpgTimerUtil.h"
 #include "../../Common/IniUtil.h"
@@ -22,14 +23,12 @@ BOOL DuplicateSave(LPCWSTR originalPath, DWORD *targetID, wstring *targetPath)
 		buf.resize(buf.size() + 16, L'\0');
 	}
 	BOOL ret = FALSE;
-	HMODULE hDll = LoadLibrary(GetModulePath().replace_filename(L"Write_Multi.dll").c_str());
-	if (hDll) {
-		BOOL (WINAPI*pfnDuplicateSave)(LPCWSTR,DWORD*,WCHAR*,DWORD,int,ULONGLONG) =
-			reinterpret_cast<BOOL (WINAPI*)(LPCWSTR,DWORD*,WCHAR*,DWORD,int,ULONGLONG)>(GetProcAddress(hDll, "DuplicateSave"));
-		if (pfnDuplicateSave) {
+	std::unique_ptr<void, decltype(&UtilFreeLibrary)> module(UtilLoadLibrary(GetModulePath().replace_filename(L"Write_Multi.dll")), UtilFreeLibrary);
+	if (module) {
+		BOOL (WINAPI* pfnDuplicateSave)(LPCWSTR, DWORD*, WCHAR*, DWORD, int, ULONGLONG);
+		if (UtilGetProcAddress(module.get(), "DuplicateSave", pfnDuplicateSave)) {
 			ret = pfnDuplicateSave(originalPath, targetID, targetPath ? &buf.front() : nullptr, static_cast<DWORD>(buf.size()), -1, 0);
 		}
-		FreeLibrary(hDll);
 	}
 	if (ret && targetPath) {
 		*targetPath = &buf.front();
@@ -69,7 +68,7 @@ bool CEdcbPlugIn::CMyEventHandler::OnChannelChange()
 		m_outer.m_chChangeID = CH_CHANGE_ERR;
 		if (ret) {
 			m_outer.m_chChangeID = static_cast<DWORD>(ci.NetworkID) << 16 | ci.TransportStreamID;
-			m_outer.m_chChangeTick = GetTickCount();
+			m_outer.m_chChangeTick = GetU32Tick();
 		}
 	}
 	m_outer.m_chChangedAfterSetCh = true;
@@ -399,7 +398,7 @@ LRESULT CEdcbPlugIn::WndProc_(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 							si.NetworkID = chInfo.ONID;
 							si.TransportStreamID = chInfo.TSID;
 							if (m_pApp->SelectChannel(&si)) {
-								m_epgCapStartTick = GetTickCount();
+								m_epgCapStartTick = GetU32Tick();
 								m_epgCapChkNext = false;
 								break;
 							}
@@ -415,13 +414,13 @@ LRESULT CEdcbPlugIn::WndProc_(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 					}
 					bool saveEpgFile = false;
 					if (chChangeID != CH_CHANGE_OK) {
-						if (chChangeID == CH_CHANGE_ERR || GetTickCount() - m_epgCapStartTick > 15000) {
+						if (chChangeID == CH_CHANGE_ERR || GetU32Tick() - m_epgCapStartTick > 15000) {
 							// チャンネル切り替えエラーか切り替えに15秒以上かかってるので無信号と判断
 							m_epgCapChList.erase(m_epgCapChList.begin());
 							m_epgCapChkNext = true;
 						}
 					}
-					else if (GetTickCount() - m_epgCapStartTick > m_epgCapTimeout * 60000) {
+					else if (GetU32Tick() - m_epgCapStartTick > m_epgCapTimeout * 60000) {
 						// m_epgCapTimeout分以上かかっているなら停止
 						m_epgCapChList.erase(m_epgCapChList.begin());
 						m_epgCapChkNext = true;
@@ -495,13 +494,13 @@ LRESULT CEdcbPlugIn::WndProc_(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		case TIMER_EPGCAP_BACK:
 			if (m_epgCapBack) {
 				bool saveEpgFile = false;
-				if (GetTickCount() - m_epgCapBackStartTick > max<DWORD>(m_epgCapBackStartWaitSec, 15) * 1000) {
+				if (GetU32Tick() - m_epgCapBackStartTick > max<DWORD>(m_epgCapBackStartWaitSec, 15) * 1000) {
 					WORD onid;
 					WORD tsid;
 					if (m_chChangeID != CH_CHANGE_OK || m_epgUtil.GetTSID(&onid, &tsid) != NO_ERR) {
 						m_epgCapBack = false;
 					}
-					else if (GetTickCount() - m_epgCapBackStartTick > m_epgCapTimeout * 60000 + max<DWORD>(m_epgCapBackStartWaitSec, 15) * 1000) {
+					else if (GetU32Tick() - m_epgCapBackStartTick > m_epgCapTimeout * 60000 + max<DWORD>(m_epgCapBackStartWaitSec, 15) * 1000) {
 						// m_epgCapTimeout分以上かかっているなら停止
 						m_epgCapBack = false;
 						saveEpgFile = m_epgCapSaveTimeout;
@@ -622,7 +621,7 @@ LRESULT CEdcbPlugIn::WndProc_(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 			SendMessage(hwnd, WM_EPGCAP_BACK_STOP, 0, 0);
 			if (IsTunerBonDriver() && m_epgCapChList.empty()) {
 				m_epgCapBack = m_epgCapBackStartWaitSec != MAXDWORD;
-				m_epgCapBackStartTick = GetTickCount();
+				m_epgCapBackStartTick = GetU32Tick();
 				SetTimer(hwnd, TIMER_EPGCAP_BACK, 2000, nullptr);
 			}
 		}
@@ -1056,7 +1055,7 @@ BOOL CALLBACK CEdcbPlugIn::StreamCallback(BYTE *pData, void *pClientData)
 			if (packet.PID < BON_SELECTIVE_PID) {
 				// チャンネル切り替え中
 				// 1秒間は切り替え前のパケット来る可能性を考慮して無視する
-				if (GetTickCount() - this_.m_chChangeTick > 1000) {
+				if (GetU32Tick() - this_.m_chChangeTick > 1000) {
 					this_.m_epgUtil.AddTSPacket(pData, 188);
 					WORD onid;
 					WORD tsid;
@@ -1066,7 +1065,7 @@ BOOL CALLBACK CEdcbPlugIn::StreamCallback(BYTE *pData, void *pClientData)
 						this_.m_serviceFilter.Clear(tsid);
 #endif
 					}
-					else if (GetTickCount() - this_.m_chChangeTick > 15000) {
+					else if (GetU32Tick() - this_.m_chChangeTick > 15000) {
 						// 15秒以上たってるなら切り替えエラー
 						this_.m_chChangeID = CH_CHANGE_ERR;
 						SendNotifyMessage(this_.m_hwnd, WM_UPDATE_STATUS_CODE, 0, 0);
@@ -1107,7 +1106,7 @@ BOOL CALLBACK CEdcbPlugIn::StreamCallback(BYTE *pData, void *pClientData)
 				}
 				this_.m_epgUtil.AddTSPacket(pData, 188);
 
-				DWORD tick = GetTickCount();
+				DWORD tick = GetU32Tick();
 				if (tick - this_.m_logoTick >= 1000) {
 					this_.m_epgUtil.SetLogoTypeFlags(this_.m_logoTypeFlags, &this_.m_logoAdditionalNeededPids);
 					if (this_.m_logoTypeFlags) {

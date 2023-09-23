@@ -27,7 +27,7 @@ EPG_MINIMUM_PX=12
 EPG_SERVICE_PX=150
 --番組表の時刻軸を入れる間隔
 EPG_TIME_COLUMN=3
---番組表の番組を絞り込みたいときはNOTキーワードの先頭を"#EPG_CUST_1"にした自動EPG予約を作る
+--番組表の番組を絞り込みたいときはメモ欄かNOTキーワードの先頭を"#EPG_CUST_1"にした自動EPG予約を作る
 
 --ライブラリに表示するフォルダをドキュメントルートから'/'区切りの相対パスで指定
 --指定フォルダとその1階層下のフォルダにあるメディアファイルまでが表示対象
@@ -52,6 +52,9 @@ USE_MP4_HLS=true
 --視聴機能(viewボタン)でLowLatencyHLSにするかどうか。再生遅延が小さくなる。ネイティブHLS環境ではHTTP/2が要求されるためhls.js使用時のみ有用
 USE_MP4_LLHLS=true
 
+--倍速再生(fastボタン)の速度
+XCODE_FAST=1.25
+
 --トランスコードオプション
 --HLSのときはセグメント長約4秒、最大8MBytes(=1秒あたり16Mbits)を想定しているので、オプションもそれに合わせること
 --HLSでないときはフラグメントMP4などを使ったプログレッシブダウンロード。字幕は適当な重畳手法がまだないので未対応
@@ -67,8 +70,8 @@ XCODE_OPTIONS={
     option='-f mpegts -analyzeduration 1M -i - -map 0:v?:0 -vcodec libx264 -flags:v +cgop -profile:v main -level 31 -b:v 1888k -qmin 23 -maxrate 4M -bufsize 4M -preset veryfast $FILTER -s 640x360 -map 0:a:$AUDIO -acodec aac -ac 2 -b:a 160k $CAPTION -max_interleave_delta 500k $OUTPUT',
     filter='-g 120 -vf yadif=0:-1:1',
     filterCinema='-g 96 -vf pullup -r 24000/1001',
-    filterFast='-g 120 -vf yadif=0:-1:1,setpts=PTS/1.25 -af atempo=1.25 -bsf:s setts=ts=TS/1.25',
-    filterCinemaFast='-g 96 -vf pullup,setpts=PTS/1.25 -af atempo=1.25 -bsf:s setts=ts=TS/1.25 -r 24000/1001',
+    filterFast='-g 120 -vf yadif=0:-1:1,setpts=PTS/'..XCODE_FAST..' -af atempo='..XCODE_FAST..' -bsf:s setts=ts=TS/'..XCODE_FAST,
+    filterCinemaFast='-g 96 -vf pullup,setpts=PTS/'..XCODE_FAST..' -af atempo='..XCODE_FAST..' -bsf:s setts=ts=TS/'..XCODE_FAST..' -r 24000/1001',
     captionNone='-sn',
     captionHls='-map 0:s? -scodec copy',
     output={'mp4','-f mp4 -movflags frag_keyframe+empty_moov -'},
@@ -80,8 +83,8 @@ XCODE_OPTIONS={
     option='-f mpegts -analyzeduration 1M -i - -map 0:v?:0 -vcodec h264_nvenc -profile:v main -level 41 -b:v 3936k -qmin 23 -maxrate 8M -bufsize 8M -preset medium $FILTER -s 1280x720 -map 0:a:$AUDIO -acodec aac -ac 2 -b:a 160k $CAPTION -max_interleave_delta 500k $OUTPUT',
     filter='-g 120 -vf yadif=0:-1:1',
     filterCinema='-g 96 -vf pullup -r 24000/1001',
-    filterFast='-g 120 -vf yadif=0:-1:1,setpts=PTS/1.25 -af atempo=1.25 -bsf:s setts=ts=TS/1.25',
-    filterCinemaFast='-g 96 -vf pullup,setpts=PTS/1.25 -af atempo=1.25 -bsf:s setts=ts=TS/1.25 -r 24000/1001',
+    filterFast='-g 120 -vf yadif=0:-1:1,setpts=PTS/'..XCODE_FAST..' -af atempo='..XCODE_FAST..' -bsf:s setts=ts=TS/'..XCODE_FAST,
+    filterCinemaFast='-g 96 -vf pullup,setpts=PTS/'..XCODE_FAST..' -af atempo='..XCODE_FAST..' -bsf:s setts=ts=TS/'..XCODE_FAST..' -r 24000/1001',
     captionNone='-sn',
     captionHls='-map 0:s? -scodec copy',
     output={'mp4','-f mp4 -movflags frag_keyframe+empty_moov -'},
@@ -94,8 +97,8 @@ XCODE_OPTIONS={
     option='-f mpegts -analyzeduration 1M -i - -map 0:v?:0 -vcodec h264_qsv -profile:v main -level 41 -b:v 3936k -min_qp_i 23 -min_qp_p 26 -min_qp_b 30 -maxrate 8M -bufsize 8M -preset medium $FILTER -s 1280x720 -map 0:a:$AUDIO -acodec aac -ac 2 -b:a 160k $CAPTION -max_interleave_delta 500k $OUTPUT',
     filter='-g 120 -vf yadif=0:-1:1',
     filterCinema='-g 96 -vf pullup -r 24000/1001',
-    filterFast='-g 120 -vf yadif=0:-1:1,setpts=PTS/1.25 -af atempo=1.25 -bsf:s setts=ts=TS/1.25',
-    filterCinemaFast='-g 96 -vf pullup,setpts=PTS/1.25 -af atempo=1.25 -bsf:s setts=ts=TS/1.25 -r 24000/1001',
+    filterFast='-g 120 -vf yadif=0:-1:1,setpts=PTS/'..XCODE_FAST..' -af atempo='..XCODE_FAST..' -bsf:s setts=ts=TS/'..XCODE_FAST,
+    filterCinemaFast='-g 96 -vf pullup,setpts=PTS/'..XCODE_FAST..' -af atempo='..XCODE_FAST..' -bsf:s setts=ts=TS/'..XCODE_FAST..' -r 24000/1001',
     captionNone='-sn',
     captionHls='-map 0:s? -scodec copy',
     output={'mp4','-f mp4 -movflags frag_keyframe+empty_moov -'},
@@ -107,8 +110,8 @@ XCODE_OPTIONS={
     option='-f mpegts -analyzeduration 1M -i - -map 0:v?:0 -vcodec libvpx -b:v 1888k -quality realtime -cpu-used 1 $FILTER -s 640x360 -map 0:a:$AUDIO -acodec libvorbis -ac 2 -b:a 160k $CAPTION -max_interleave_delta 500k $OUTPUT',
     filter='-vf yadif=0:-1:1',
     filterCinema='-vf pullup -r 24000/1001',
-    filterFast='-vf yadif=0:-1:1,setpts=PTS/1.25 -af atempo=1.25',
-    filterCinemaFast='-vf pullup,setpts=PTS/1.25 -af atempo=1.25 -r 24000/1001',
+    filterFast='-vf yadif=0:-1:1,setpts=PTS/'..XCODE_FAST..' -af atempo='..XCODE_FAST,
+    filterCinemaFast='-vf pullup,setpts=PTS/'..XCODE_FAST..' -af atempo='..XCODE_FAST..' -r 24000/1001',
     captionNone='-sn',
     output={'webm','-f webm -'},
   },
@@ -146,6 +149,16 @@ XCODE_CHECK_CINEMA=false
 XCODE_CHECK_FAST=false
 XCODE_CHECK_CAPTION=false
 
+--トランスコード時、初期値ミュートで再生するかどうか
+--自動再生が無効になるブラウザが多いため、一時停止しつづけるとタイムアウトするトランスコード時はミュートを推奨
+XCODE_VIDEO_MUTED=true
+
+--非トランスコード時、初期値ミュートで再生するかどうか
+VIDEO_MUTED=false
+
+--音量の初期値。0～1、nilのとき未指定
+VIDEO_VOLUME=nil
+
 --字幕表示のオプション https://github.com/monyone/aribb24.js#options
 ARIBB24_JS_OPTION=[=[
   normalFont:'"Rounded M+ 1m for ARIB","Yu Gothic Medium",sans-serif',
@@ -157,6 +170,39 @@ ARIBB24_USE_SVG=false
 
 --データ放送表示機能を使うかどうか。トランスコード中に表示する場合はpsisiarc.exeを用意すること。IE非対応
 USE_DATACAST=true
+
+--ライブ実況表示機能を使うかどうか
+--利用には実況を扱うツール側の対応(NicoJKの場合はcommentShareMode)が必要
+USE_LIVEJK=true
+
+--実況ログ表示機能を使う場合、jkrdlog.exeの絶対パス
+JKRDLOG_PATH=nil
+--JKRDLOG_PATH='C:\\Path\\to\\jkrdlog.exe'
+
+--実況コメントの文字の高さ(px)
+JK_COMMENT_HEIGHT=32
+
+--実況コメントの表示時間(秒)
+JK_COMMENT_DURATION=5
+
+--実況ログ表示機能のデジタル放送のサービスIDと、実況の番号(jk?)
+--キーの下4桁の16進数にサービスID、上1桁にネットワークID(ただし地上波は15=0xF)を指定
+--指定しないサービスにはjkrdlogの既定値が使われる
+JK_CHANNELS={
+  --例:テレビ東京(0x0430)をjk7と対応づけたいとき
+  --[0xF0430]=7,
+  --例:NHKBS1(0x0065)とデフォルト(jk101)との対応付けを解除したいとき
+  --[0x40065]=-1,
+}
+
+--chatタグ表示前の置換(JavaScript)
+JK_CUSTOM_REPLACE=[=[
+  // 広告などを下コメにする
+  tag = tag.replace(/^<chat(?![^>]*? mail=)/, '<chat mail=""');
+  tag = tag.replace(/^(<chat[^>]*? premium="3"[^>]*?>\/nicoad )(\{[^<]*?"totalAdPoint":)(\d+)/, "$1$3$2");
+  tag = tag.replace(/^<chat(?=[^>]*? premium="3")([^>]*? mail=")([^>]*?>)\/nicoad (\d*)\{[^<]*?"message":("[^<]*?")[,}][^<]*/, '<chat align="right"$1shita small yellow $2$4($3pt)');
+  tag = tag.replace(/^<chat(?=[^>]*? premium="3")([^>]*? mail=")([^>]*?>)\/spi /, '<chat align="right"$1shita small white2 $2');
+]=]
 
 --トランスコードするかどうか。する場合はtsreadex.exeとトランスコーダー(ffmpeg.exeなど)を用意すること
 XCODE=true
@@ -184,7 +230,6 @@ function GetTranscodeQueries(qs)
     audio2=GetVarInt(qs,'audio2')==1,
     cinema=GetVarInt(qs,'cinema')==1,
     fast=GetVarInt(qs,'fast')==1,
-    caption=GetVarInt(qs,'caption')==1,
   }
 end
 
@@ -194,7 +239,6 @@ function ConstructTranscodeQueries(xq)
     ..(xq.audio2 and '&amp;audio2=1' or '')
     ..(xq.cinema and '&amp;cinema=1' or '')
     ..(xq.fast and '&amp;fast=1' or '')
-    ..(xq.caption and '&amp;caption=1' or '')
 end
 
 function TranscodeSettingTemplete(xq,fsec)
@@ -218,80 +262,20 @@ function TranscodeSettingTemplete(xq,fsec)
   if fsec then
     s=s..'<label><input type="checkbox" name="fast" value="1"'..((xq.fast or not xq.option and XCODE_CHECK_FAST) and ' checked' or '')..'>fast</label>\n'
   end
-  if ALLOW_HLS then
-    s=s..'<label><input type="checkbox" name="caption" value="1"'..((xq.caption or not xq.option and XCODE_CHECK_CAPTION) and ' checked' or '')..'>caption</label>\n'
-  end
   return s
 end
 
 function OnscreenButtonsScriptTemplete()
   return [=[
+<script src="script.js?ver=20230917"></script>
 <script>
+var vid=document.getElementById("vid");
+var vcont=document.getElementById("vid-cont");
+var vfull=document.getElementById("vid-full");
+var vwrap=document.getElementById("vid-wrap");
+var setSendComment;
 var hideOnscreenButtons;
-(function(){
-  var vfull=document.getElementById("vid-full");
-  var vcont=document.getElementById("vid-cont");
-  var btn=document.createElement("button");
-  btn.type="button";
-  btn.innerText="full";
-  btn.onclick=function(){(vfull.requestFullscreen||vfull.webkitRequestFullscreen||vfull.webkitRequestFullScreen).call(vfull);};
-  var bfull=document.createElement("div");
-  bfull.className="full-control";
-  bfull.appendChild(btn);
-  btn=document.createElement("button");
-  btn.type="button";
-  btn.innerText="exit";
-  btn.onclick=function(){(document.exitFullscreen||document.webkitExitFullscreen||document.webkitCancelFullScreen).call(document);};
-  var bexit=document.createElement("div");
-  bexit.className="exit-control";
-  bexit.appendChild(btn);
-  var vid=document.getElementById("vid");
-  var diffs=[0,0,0,0,0];
-  var duration=-1;
-  var lastseek=0;
-  function checkDuration(){
-    var seekable=vid.duration;
-    if(seekable==Infinity)seekable=vid.seekable.length>0?vid.seekable.end(vid.seekable.length-1):0;
-    if(!(seekable>0))return;
-    if(duration<0)duration=seekable;
-    if(seekable-duration<0.5)return;
-    diffs.shift();
-    diffs.push(seekable-duration);
-    duration=seekable;
-    var interval=Math.max(diffs[0],diffs[1],diffs[2],diffs[3],diffs[4])+1;
-    if(vid.currentTime<duration-interval*2-3&&Date.now()-lastseek>10000){
-      var cbLive=document.getElementById("cb-live");
-      if(cbLive&&cbLive.checked){
-        vid.currentTime=duration-interval;
-        lastseek=Date.now();
-      }
-    }
-  }
-  vid.ondurationchange=checkDuration;
-  setInterval(checkDuration,500);
-  btn=document.createElement("button");
-  btn.type="button";
-  btn.innerText="→";
-  btn.onclick=function(){vid.currentTime=duration-Math.max(diffs[0],diffs[1],diffs[2],diffs[3],diffs[4])-1;};
-  var blive=document.createElement("div");
-  blive.className="live-control";
-  blive.appendChild(btn);
-  var removed=true;
-  hideOnscreenButtons=function(hide){
-    if(!removed&&hide){
-      vcont.removeChild(bfull);
-      vcont.removeChild(bexit);
-      vcont.removeChild(blive);
-      removed=true;
-    }else if(removed&&!hide){
-      vcont.appendChild(bfull);
-      vcont.appendChild(bexit);
-      vcont.appendChild(blive);
-      removed=false;
-    }
-  };
-  hideOnscreenButtons(false);
-})();
+runOnscreenButtonsScript();
 </script>
 ]=]
 end
@@ -331,227 +315,78 @@ function WebBmlScriptTemplate(label)
 ]=] or ''
 end
 
+function JikkyoScriptTemplate(live)
+  return (live and USE_LIVEJK or not live and JKRDLOG_PATH) and [=[
+<label><input id="cb-jikkyo" type="checkbox">jikkyo</label>
+<script src="danmaku.js"></script>
+<script>
+var onJikkyoStream=null;
+var onJikkyoStreamError=null;
+var checkJikkyoDisplay;
+var toggleJikkyo;
+runJikkyoScript(]=]..JK_COMMENT_HEIGHT..','..JK_COMMENT_DURATION..',function(tag){'..JK_CUSTOM_REPLACE..[=[
+  return tag;});
+</script>
+]=] or [=[
+<script>
+var onJikkyoStream=null;
+var onJikkyoStreamError=null;
+var checkJikkyoDisplay=function(){};
+</script>
+]=]
+end
+
 function VideoScriptTemplete()
-  return OnscreenButtonsScriptTemplete()..WebBmlScriptTemplate('datacast.psc')..[=[
+  return OnscreenButtonsScriptTemplete()..WebBmlScriptTemplate('datacast.psc')..JikkyoScriptTemplate(false)..[=[
 <label id="label-caption" style="display:none"><input id="cb-caption" type="checkbox"]=]
   ..(XCODE_CHECK_CAPTION and ' checked' or '')..[=[>caption.vtt</label>
 <script src="aribb24.js"></script>
-<script src="script.js"></script>
 <script>
-var cap=null;
-var cbCaption=document.getElementById("cb-caption");
-cbCaption.onclick=function(){
-  if(cap){if(cbCaption.checked){cap.show();}else{cap.hide();}}
-};
-var vid=document.getElementById("vid")
-var vidMeta=document.getElementById("vid-meta");
-vidMeta.oncuechange=function(){
-  vidMeta.oncuechange=null;
-  var work=[];
-  var dataList=[];
-  var cues=vidMeta.track.cues;
-  for(var i=0;i<cues.length;i++){
-    var ret=decodeB24CaptionFromCueText(cues[i].text,work);
-    if(!ret){return;}
-    for(var j=0;j<ret.length;j++){dataList.push({pts:cues[i].startTime,pes:ret[j]});}
-  }
-  cap=new aribb24js.]=]..(ARIBB24_USE_SVG and 'SVG' or 'Canvas')..'Renderer({'..ARIBB24_JS_OPTION..[=[});
-  cap.attachMedia(vid);
-  document.getElementById("label-caption").style.display="inline";
-  if(!cbCaption.checked){cap.hide();}
-  dataList.reverse();
-  (function pushCap(){
-    for(var i=0;i<100;i++){
-      var data=dataList.pop();
-      if(!data){return;}
-      cap.pushRawData(data.pts,data.pes);
-    }
-    setTimeout(pushCap,0);
-  })();
-};
+]=]..(VIDEO_MUTED and 'vid.muted=true;\n' or '')..(VIDEO_VOLUME and 'vid.volume='..VIDEO_VOLUME..';\n' or '')..[=[
+runVideoScript(]=]
+  ..(ARIBB24_USE_SVG and 'true' or 'false')..',{'..ARIBB24_JS_OPTION..'},'
+  ..(USE_DATACAST and 'true' or 'false')..','
+  ..(JKRDLOG_PATH and 'true' or 'false')..[=[
+);
 </script>
-]=]..(USE_DATACAST and [=[
-<script>
-var psiData=null;
-var readTimer=null;
-var videoLastSec=0;
-function startReadPsiData(video){
-  clearTimeout(readTimer);
-  var startSec=video.currentTime;
-  videoLastSec=startSec;
-  var ctx={};
-  var counters=[];
-  var f=function(){
-    var videoSec=video.currentTime;
-    if(videoSec<videoLastSec||videoLastSec+10<videoSec){
-      startReadPsiData(video);
-      return;
-    }
-    videoLastSec=videoSec;
-    if(psiData&&readPsiData(psiData,function(sec,psiTS,pid){
-        setTSPacketHeader(psiTS,counters,pid);
-        bmlBrowserPlayTS(psiTS,Math.floor(sec*90000));
-        return sec<videoSec;
-      },startSec,ctx)!==false){
-      startReadPsiData(video);
-      return;
-    }
-    readTimer=setTimeout(f,500);
-  };
-  readTimer=setTimeout(f,500);
-}
-var xhr=null;
-var cbDatacast=document.getElementById("cb-datacast");
-cbDatacast.onclick=function(){
-  document.querySelector(".remote-control").style.display=cbDatacast.checked?"":"none";
-  if(!cbDatacast.checked){
-    clearTimeout(readTimer);
-    readTimer=null;
-    hideOnscreenButtons(false);
-    bmlBrowserSetInvisible(true);
-    return;
-  }
-  startReadPsiData(document.getElementById("vid"));
-  var vcont=document.getElementById("vid-cont");
-  bmlBrowserSetVisibleSize(vcont.clientWidth,vcont.clientHeight);
-  hideOnscreenButtons(true);
-  bmlBrowserSetInvisible(false);
-  if(xhr)return;
-  xhr=new XMLHttpRequest();
-  xhr.open("GET",document.getElementById("psidatasrc").textContent);
-  xhr.responseType="arraybuffer";
-  xhr.overrideMimeType("application/octet-stream");
-  xhr.onloadend=function(){
-    if(!psiData){
-      document.querySelector(".remote-control-indicator").innerText="Error! ("+xhr.status+")";
-    }
-  };
-  xhr.onload=function(){
-    if(xhr.status!=200||!xhr.response)return;
-    psiData=xhr.response;
-  };
-  xhr.send();
-};
-</script>
-]=] or '')
+]=]
 end
 
-function TranscodeScriptTemplete(live)
-  return OnscreenButtonsScriptTemplete()..WebBmlScriptTemplate('datacast')
+function TranscodeScriptTemplete(live,params)
+  return OnscreenButtonsScriptTemplete()..WebBmlScriptTemplate('datacast')..JikkyoScriptTemplate(live)
+    ..'<label id="label-caption" style="display:none"><input id="cb-caption" type="checkbox"'
+      ..(XCODE_CHECK_CAPTION and ' checked' or '')..'>caption</label>\n'
     ..(live and '<label><input id="cb-live" type="checkbox">live</label>\n' or '')..[=[
-<script src="script.js"></script>
-]=]..(USE_DATACAST and [=[
 <script>
-var xhr=null;
-var psiData=null;
-var responseCount;
-var ctx;
-var counters;
-var cbDatacast=document.getElementById("cb-datacast");
-cbDatacast.onclick=function(){
-  document.querySelector(".remote-control").style.display=cbDatacast.checked?"":"none";
-  if(!cbDatacast.checked){
-    if(xhr){
-      xhr.abort();
-      xhr=null;
-    }
-    hideOnscreenButtons(false);
-    bmlBrowserSetInvisible(true);
-    return;
-  }
-  var videoSec=Math.floor(document.getElementById("vid").currentTime);
-  var vcont=document.getElementById("vid-cont");
-  bmlBrowserSetVisibleSize(vcont.clientWidth,vcont.clientHeight);
-  hideOnscreenButtons(true);
-  bmlBrowserSetInvisible(false);
-  if(psiData||xhr)return;
-  psiData=new Uint8Array(0);
-  responseCount=0;
-  ctx={};
-  counters=[];
-  xhr=new XMLHttpRequest();
-  xhr.open("GET",document.getElementById("vidsrc").textContent+"&psidata=1&ofssec="+videoSec);
-  xhr.onloadend=function(){
-    if(!psiData||!responseCount){
-      document.querySelector(".remote-control-indicator").innerText="Error! ("+xhr.status+"|"+responseCount+"Bytes)";
-    }
-    xhr=null;
-    psiData=null;
-  };
-  xhr.onprogress=function(){
-    if(!psiData||!xhr||xhr.status!=200||!xhr.response||xhr.response.length<=responseCount)return;
-    var n=Math.floor((xhr.response.length-responseCount)/4)*4;
-    var addData=atob(xhr.response.substring(responseCount,responseCount+n));
-    responseCount+=n;
-    var concatData=new Uint8Array(psiData.length+addData.length);
-    for(var i=0;i<psiData.length;i++)concatData[i]=psiData[i];
-    for(var i=0;i<addData.length;i++)concatData[psiData.length+i]=addData.charCodeAt(i);
-    psiData=readPsiData(concatData.buffer,function(sec,psiTS,pid){
-      setTSPacketHeader(psiTS,counters,pid);
-      bmlBrowserPlayTS(psiTS,Math.floor(sec*90000));
-      return true;
-    },0,ctx);
-    if(psiData)psiData=new Uint8Array(psiData);
-  };
-  xhr.send();
-};
+]=]..(XCODE_VIDEO_MUTED and 'vid.muted=true;\n' or '')..(VIDEO_VOLUME and 'vid.volume='..VIDEO_VOLUME..';\n' or '')..[=[
+runTranscodeScript(]=]
+  ..(USE_DATACAST and 'true' or 'false')..','
+  ..(live and USE_LIVEJK and 'true' or 'false')..','
+  ..(not live and JKRDLOG_PATH and 'true' or 'false')..','
+  ..math.floor(params.ofssec or 0)..','
+  ..(params.fast and XCODE_FAST or 1)..','
+  ..'"'..(live and USE_LIVEJK and 'ctok='..CsrfToken('comment.lua')..'&n='..params.n..(params.id and '&id='..params.id or '') or '')..'"'..[=[
+);
 </script>
-]=] or '')
+]=]
 end
 
-function HlsScriptTemplete(caption)
-  local s=''
+function HlsScriptTemplete()
   local now=os.date('!*t')
-  local hls='&hls='..(1+(now.hour*60+now.min)*60+now.sec)
-  local hls4=USE_MP4_HLS and '&hls4='..(USE_MP4_LLHLS and '2' or '1') or ''
-  if ALWAYS_USE_HLS then
-    s=s..'<script src="hls.min.js"></script>\n'
-      ..(caption and '<script src="aribb24.js"></script>\n' or '')
-      ..'<script>\n'
-      ..'var vid=document.getElementById("vid");\n'
-      ..(caption and 'var cap=new aribb24js.'..(ARIBB24_USE_SVG and 'SVG' or 'Canvas')
-           ..'Renderer({enableAutoInBandMetadataTextTrackDetection:!Hls.isSupported(),'..ARIBB24_JS_OPTION..'});\n'
-           ..'cap.attachMedia(vid);\n' or '')
-      ..'var cbLive=document.getElementById("cb-live");\n'
-      ..'if(cbLive)cbLive.checked=true;\n'
-      ..'vid.poster="loading.png";\n'
-      --Android版Firefoxは非キーフレームで切ったフラグメントMP4だとカクつくので避ける
-      ..'waitForHlsStart(document.getElementById("vidsrc").textContent+"'..hls..'"+(/Android.+Firefox/i.test(navigator.userAgent)?"":"'..hls4
-      ..'"),1000,2000,function(){vid.poster=null;},function(src){\n'
-      ..'  if(Hls.isSupported()){\n'
-      ..'    var hls=new Hls();\n'
-      ..'    hls.loadSource(src);\n'
-      ..'    hls.attachMedia(vid);\n'
-      ..'    hls.on(Hls.Events.MANIFEST_PARSED,function(){vid.play();});\n'
-      ..(caption and '    hls.on(Hls.Events.FRAG_PARSING_METADATA,function(event,data){\n'
-           ..'      for(var i=0;i<data.samples.length;i++){cap.pushID3v2Data(data.samples[i].pts,data.samples[i].data);}\n'
-           ..'    });\n' or '')
-      ..'  }else if(vid.canPlayType("application/vnd.apple.mpegurl")){\n'
-      ..'    vid.src=src;\n'
-      ..'  }\n'
-      ..'});\n'
-      ..'</script>'
-  else
-    s=s..(caption and '<script src="aribb24.js"></script>\n' or '')
-      ..'<script>\n'
-      ..'var vid=document.getElementById("vid");\n'
-      ..(caption and 'var cap=new aribb24js.'..(ARIBB24_USE_SVG and 'SVG' or 'Canvas')
-           ..'Renderer({enableAutoInBandMetadataTextTrackDetection:true,'..ARIBB24_JS_OPTION..'});\n'
-           ..'cap.attachMedia(vid);\n' or '')
-      --AndroidはcanPlayTypeが空文字列を返さないことがあるが実装に個体差が大きいので避ける
-      ..'if(!/Android/i.test(navigator.userAgent)&&vid.canPlayType("application/vnd.apple.mpegurl")){\n'
-      ..'  var cbLive=document.getElementById("cb-live");\n'
-      ..'  if(cbLive)cbLive.checked=true;\n'
-      ..'  vid.poster="loading.png";\n'
-      ..'  waitForHlsStart(document.getElementById("vidsrc").textContent+"'..hls..hls4..'",1000,2000,function(){vid.poster=null;},function(src){\n'
-      ..'    vid.src=src;\n'
-      ..'  });\n'
-      ..'}else{\n'
-      ..'  vid.src=document.getElementById("vidsrc").textContent;\n'
-      ..'}\n'
-      ..'</script>'
-  end
-  return s;
+  return [=[
+<script src="aribb24.js"></script>
+]=]..(ALWAYS_USE_HLS and [=[
+<script src="hls.min.js"></script>
+]=] or '')..[=[
+<script>
+runHlsScript(]=]
+  ..(ARIBB24_USE_SVG and 'true' or 'false')..',{'..ARIBB24_JS_OPTION..'},'
+  ..(ALWAYS_USE_HLS and 'true' or 'false')..','
+  ..'"&hls='..(1+(now.hour*60+now.min)*60+now.sec)..'",'
+  ..'"'..(USE_MP4_HLS and '&hls4='..(USE_MP4_LLHLS and '2' or '1') or '')..'"'..[=[
+);
+</script>
+]=]
 end
 
 --EPG情報をTextに変換(EpgTimerUtil.cppから移植)
@@ -640,7 +475,7 @@ function RecSettingTemplate(rs)
     ..'使用チューナー強制指定: <select name="tunerID"><option value="0"'..(rs.tunerID==0 and ' selected' or '')..'>自動'
   local a=edcb.GetTunerReserveAll()
   for i=1,#a-1 do
-    s=s..'<option value="'..a[i].tunerID..'"'..(a[i].tunerID==rs.tunerID and ' selected' or '')..string.format('>ID:%08X(', a[i].tunerID)..a[i].tunerName..')'
+    s=s..'<option value="'..a[i].tunerID..'"'..(a[i].tunerID==rs.tunerID and ' selected' or '')..('>ID:%08X('):format(a[i].tunerID)..a[i].tunerName..')'
   end
   s=s..'</select><br>\n'
     ..'録画後動作: <select name="suspendMode">'
@@ -754,9 +589,14 @@ end
 --時間の文字列を取得する
 function FormatTimeAndDuration(t,dur)
   dur=dur and (t.hour*3600+t.min*60+t.sec+dur)
-  return string.format('%d/%02d/%02d(%s) %02d:%02d',t.year,t.month,t.day,({'日','月','火','水','木','金','土',})[t.wday],t.hour,t.min)
-    ..(t.sec~=0 and string.format('<small>:%02d</small>',t.sec) or '')
-    ..(dur and string.format('～%02d:%02d',math.floor(dur/3600)%24,math.floor(dur/60)%60)..(dur%60~=0 and string.format('<small>:%02d</small>',dur%60) or '') or '')
+  return ('%d/%02d/%02d(%s) %02d:%02d'):format(t.year,t.month,t.day,({'日','月','火','水','木','金','土',})[t.wday],t.hour,t.min)
+    ..(t.sec~=0 and ('<small>:%02d</small>'):format(t.sec) or '')
+    ..(dur and ('～%02d:%02d'):format(math.floor(dur/3600)%24,math.floor(dur/60)%60)..(dur%60~=0 and ('<small>:%02d</small>'):format(dur%60) or '') or '')
+end
+
+--システムのタイムゾーンに影響されずに時間のテーブルを数値表現にする (timezone=0のとき概ねos.date('!*t')の逆関数)
+function TimeWithZone(t,timezone)
+  return os.time(t)+90000-os.time(os.date('!*t',90000))-(timezone or 0)
 end
 
 --ドキュメントルートへの相対パスを取得する
@@ -792,6 +632,11 @@ function EdcbHtmlEscape(s)
   return edcb.Convert('utf-8','utf-8',s)
 end
 
+--符号なし整数の時計算の差を計算する
+function UintCounterDiff(a,b)
+  return (a+0x100000000-b)%0x100000000
+end
+
 --PCRまで読む
 function ReadToPcr(f,pid)
   for i=1,10000 do
@@ -802,7 +647,7 @@ function ReadToPcr(f,pid)
         local pcr=((buf:byte(7)*256+buf:byte(8))*256+buf:byte(9))*256+buf:byte(10)
         local pid2=buf:byte(2)%32*256+buf:byte(3)
         if not pid or pid==pid2 then
-          return pcr,pid2
+          return pcr,pid2,i*188
         end
       end
     end
@@ -810,15 +655,24 @@ function ReadToPcr(f,pid)
   return nil
 end
 
---PCRをもとにファイルの長さを概算する(少なめに報告するかもしれない)
+--PCRをもとにファイルの長さを概算する
 function GetDurationSec(f)
   local fsize=f:seek('end') or 0
   if fsize>1880000 and f:seek('set') then
     local pcr,pid=ReadToPcr(f)
     if pcr and f:seek('set',(math.floor(fsize/188)-10000)*188) then
-      local pcr2=ReadToPcr(f,pid)
+      local pcr2,pid2,n=ReadToPcr(f,pid)
       if pcr2 then
-        return math.floor((pcr2+0x100000000-pcr)%0x100000000/45000),fsize
+        --終端まで読む
+        local range=1880000
+        while true do
+          local dur=math.floor(UintCounterDiff(pcr2,pcr)/45000)
+          range=range-n
+          pcr2,pid2,n=ReadToPcr(f,pid)
+          if not pcr2 or range<0 then
+            return dur,fsize
+          end
+        end
       end
       --TSデータが存在する境目を見つける
       local predicted,range=math.floor(fsize/2/188)*188,fsize
@@ -832,7 +686,7 @@ function GetDurationSec(f)
       if predicted>0 and f:seek('set',predicted) then
         pcr2=ReadToPcr(f,pid)
         if pcr2 then
-          return math.floor((pcr2+0x100000000-pcr)%0x100000000/45000),predicted
+          return math.floor(UintCounterDiff(pcr2,pcr)/45000),predicted
         end
       end
     end
@@ -845,22 +699,115 @@ function SeekSec(f,sec,dur,fsize)
   if dur>0 and fsize>1880000 and f:seek('set') then
     local pcr,pid=ReadToPcr(f)
     if pcr then
-      local pos,diff=0,math.min(math.max(sec,0),dur)*45000
-      --5ループまたは誤差が2秒未満になるまで動画レートから概算シーク
-      for i=1,5 do
-        if math.abs(diff)<90000 then break end
-        pos=math.floor(math.min(math.max(pos+fsize/dur*diff/45000,0),fsize-1880000)/188)*188
-        if not f:seek('set',pos) then return false end
+      --最終目標の3秒手前を目標に6ループまたは誤差が±3秒未満になるまで動画レートから概算シーク
+      local pos,diff,rate=0,math.min(math.max(sec-3,0),dur)*45000,fsize/dur
+      for i=1,6 do
+        if math.abs(diff)<45000*3 then break end
+        local approx=math.floor(math.min(math.max(pos+rate*diff/45000,0),fsize-1880000)/188)*188
+        if not f:seek('set',approx) then return false end
         local pcr2=ReadToPcr(f,pid)
         if not pcr2 then return false end
         --移動分を差し引く
-        diff=diff+((pcr2+0x100000000-pcr)%0x100000000<0x80000000 and -((pcr2+0x100000000-pcr)%0x100000000) or (pcr+0x100000000-pcr2)%0x100000000)
-        pcr=pcr2
+        local diff2=diff+(UintCounterDiff(pcr2,pcr)<0x80000000 and -UintCounterDiff(pcr2,pcr) or UintCounterDiff(pcr,pcr2))
+        if math.abs(diff2)>=45000*3 and ((diff<0 and diff2>-diff/2) or (diff>0 and diff2<-diff/2)) then
+          --移動しすぎているのでレートを下げてやり直し
+          rate=rate/1.5
+        else
+          if (diff<0 and diff2*2<diff) or (diff>0 and diff2*2>diff) then
+            --あまり移動していないのでレートを上げる
+            rate=rate*1.5
+          end
+          pos=approx
+          pcr=pcr2
+          diff=diff2
+        end
+      end
+      if math.abs(diff)<45000*3 then
+        --最終目標まで進む
+        diff=diff+45000*3
+        local diff2=diff
+        while diff2>22500 do
+          if diff2>45000*6 then return false end
+          local pcr2=ReadToPcr(f,pid)
+          if not pcr2 then return false end
+          diff2=diff+(UintCounterDiff(pcr2,pcr)<0x80000000 and -UintCounterDiff(pcr2,pcr) or UintCounterDiff(pcr,pcr2))
+        end
       end
       return true
     end
   end
   return false
+end
+
+--ファイルの先頭のTOT時刻とネットワークIDとサービスIDを取得する
+function GetTotAndServiceID(f)
+  if f:seek('set') then
+    local pcr,pcrPid=ReadToPcr(f)
+    if pcr then
+      local tot,nid,sid=nil,nil,nil
+      for i=1,400000 do
+        local buf=f:read(188)
+        if not buf or #buf~=188 or buf:byte(1)~=0x47 then break end
+        local adaptation=math.floor(buf:byte(4)/16)%4
+        local adaptationLen=adaptation==1 and -1 or adaptation==3 and buf:byte(5) or 183
+        --payload_unit_start_indicator
+        if math.floor(buf:byte(2)/64)%2==1 and adaptationLen<183 then
+          local pid=buf:byte(2)%32*256+buf:byte(3)
+          local pointer=7+adaptationLen+buf:byte(6+adaptationLen)
+          local id=pointer<=188 and buf:byte(pointer)
+          if pid==0 and pointer+13<=188 and id==0x00 then
+            --PAT
+            local sectionLen=buf:byte(pointer+2)
+            sid=buf:byte(pointer+8)*256+buf:byte(pointer+9)
+            if sectionLen>=17 and sid==0 then
+              sid=buf:byte(pointer+12)*256+buf:byte(pointer+13)
+            end
+            if sectionLen<13 or sid==0 then
+              sid=nil
+            end
+          elseif pid==16 and pointer+4<=188 and id==0x40 then
+            --NIT
+            nid=buf:byte(pointer+3)*256+buf:byte(pointer+4)
+          elseif pid==20 and pointer+7<=188 and (id==0x70 or id==0x73) and not tot then
+            --TDT,TOT
+            local pcr2=ReadToPcr(f,pcrPid)
+            if not pcr2 then break end
+            local mjd=buf:byte(pointer+3)*256+buf:byte(pointer+4)
+            local h=buf:byte(pointer+5)
+            local m=buf:byte(pointer+6)
+            local s=buf:byte(pointer+7)
+            tot=((mjd*24+math.floor(h/16)*10+h%16)*60+math.floor(m/16)*10+m%16)*60+math.floor(s/16)*10+s%16-
+                3506749200-math.floor(UintCounterDiff(pcr2,pcr)/45000)
+          end
+          if tot and nid and sid then
+            return tot,nid,sid
+          end
+        end
+      end
+    end
+  end
+  return nil
+end
+
+--ライブ実況やjkrdlogの出力のチャンクを1つだけ読み取る
+function ReadJikkyoChunk(f)
+  local head=f:read(80)
+  if not head or #head~=80 then return nil end
+  local payload=''
+  local payloadSize=tonumber(head:match('L=([0-9]+)'))
+  if not payloadSize then return nil end
+  if payloadSize>0 then
+    payload=f:read(payloadSize)
+    if not payload or #payload~=payloadSize then return nil end
+  end
+  return head..payload
+end
+
+--jkrdlogに渡す実況のIDを取得する
+function GetJikkyoID(nid,sid)
+  --地上波のサービス種別とサービス番号はマスクする
+  local id=NetworkType(nid)=='地デジ' and 0xf0000+bit32.band(sid,0xfe78) or nid*65536+sid
+  return not JK_CHANNELS[id] and 'ns'..id or JK_CHANNELS[id]>0 and 'jk'..JK_CHANNELS[id]
 end
 
 --リトルエンディアンの値を取得する

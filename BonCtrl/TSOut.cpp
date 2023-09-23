@@ -35,7 +35,7 @@ void CTSOut::SetChChangeEvent(WORD presumedONID, BOOL resetEpgUtil)
 	lock_recursive_mutex lock(this->objLock);
 
 	this->chChangeState = CH_ST_WAIT_PAT;
-	this->chChangeTime = GetTickCount();
+	this->chChangeTime = GetU32Tick();
 	this->chChangePresumedONID = presumedONID;
 
 	this->decodeUtil.UnLoadDll();
@@ -55,7 +55,7 @@ BOOL CTSOut::IsChUnknown(DWORD* elapsedTime)
 
 	if( this->chChangeState != CH_ST_DONE ){
 		if( elapsedTime != NULL ){
-			*elapsedTime = this->chChangeState == CH_ST_INIT ? MAXDWORD : GetTickCount() - this->chChangeTime;
+			*elapsedTime = this->chChangeState == CH_ST_INIT ? MAXDWORD : GetU32Tick() - this->chChangeTime;
 		}
 		return TRUE;
 	}
@@ -103,7 +103,7 @@ void CTSOut::AddTSBuff(BYTE* data, DWORD dataSize)
 	if( dataSize == 0 || data == NULL ){
 		return;
 	}
-	DWORD tick = GetTickCount();
+	DWORD tick = GetU32Tick();
 	if( this->chChangeState == CH_ST_WAIT_PAT && tick - this->chChangeTime < 1000 ){
 		//1秒間はチャンネル切り替え前のパケット来る可能性を考慮して無視する
 		return;
@@ -305,7 +305,7 @@ void CTSOut::CheckLogo(DWORD logoTypeFlags, CHECK_LOGO_RESULT& result)
 	}
 }
 
-BOOL CALLBACK CTSOut::EnumLogoListProc(DWORD logoListSize, const LOGO_INFO* logoList, LPVOID param)
+BOOL CALLBACK CTSOut::EnumLogoListProc(DWORD logoListSize, const LOGO_INFO* logoList, void* param)
 {
 	CHECK_LOGO_RESULT& result = *((pair<CHECK_LOGO_RESULT*, vector<pair<LONGLONG, DWORD>>*>*)param)->first;
 	vector<pair<LONGLONG, DWORD>>& serviceListSizeMap = *((pair<CHECK_LOGO_RESULT*, vector<pair<LONGLONG, DWORD>>*>*)param)->second;
@@ -619,12 +619,6 @@ BOOL CTSOut::GetServiceID(
 	return TRUE;
 }
 
-//UDPで送信を行う
-//戻り値：
-// TRUE（成功）、FALSE（失敗）
-//引数：
-// id			[IN]制御識別ID
-// sendList		[IN/OUT]送信先リスト。NULLで停止。Portは実際に送信に使用したPortが返る。
 BOOL CTSOut::SendUdp(
 	DWORD id,
 	vector<NW_SEND_INFO>* sendList
@@ -642,12 +636,6 @@ BOOL CTSOut::SendUdp(
 	return TRUE;
 }
 
-//TCPで送信を行う
-//戻り値：
-// TRUE（成功）、FALSE（失敗）
-//引数：
-// id			[IN]制御識別ID
-// sendList		[IN/OUT]送信先リスト。NULLで停止。Portは実際に送信に使用したPortが返る。
 BOOL CTSOut::SendTcp(
 	DWORD id,
 	vector<NW_SEND_INFO>* sendList
@@ -904,7 +892,7 @@ void CTSOut::GetErrCount(
 // writeSize			[OUT]出力サイズ
 void CTSOut::GetRecWriteSize(
 	DWORD id,
-	__int64* writeSize
+	LONGLONG* writeSize
 	)
 {
 	lock_recursive_mutex lock(this->objLock);
