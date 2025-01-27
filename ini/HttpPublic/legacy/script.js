@@ -341,7 +341,7 @@ function readJikkyoLog(text,proc,startSec,ctx){
 }
 
 //Global variables available after runOnscreenButtonsScript() is called.
-var vid,vcont,vfull,vwrap,setSendComment,hideOnscreenButtons;
+var vid,vcont,vfull,vwrap,setSendComment,setMinimizeJikkyo,hideOnscreenButtons;
 
 function adjustVideoMaxWidth(){
   if(!vwrap.style.width){
@@ -418,6 +418,27 @@ function runOnscreenButtonsScript(xcode){
     blive.className="live-control";
     blive.appendChild(btn);
   }
+  btn=document.createElement("button");
+  btn.type="button";
+  var bminjk=document.createElement("div");
+  bminjk.className="minimize-jikkyo";
+  bminjk.style.display="none";
+  bminjk.appendChild(btn);
+  setMinimizeJikkyo=function(f){
+    bminjk.style.display=f?null:"none";
+    bminjk.firstElementChild.onclick=f;
+  };
+  var bcomm=document.createElement("div");
+  bcomm.className="comment-control";
+  bcomm.style.display="none";
+  btn=document.createElement("button");
+  btn.type="button";
+  btn.innerText="\u2713";
+  btn.onclick=function(){
+    if(bcomm.classList.contains("opaque"))bcomm.classList.remove("opaque");
+    else bcomm.classList.add("opaque");
+  };
+  bcomm.appendChild(btn);
   var commInput=document.createElement("input");
   commInput.type="text";
   commInput.className="nico";
@@ -428,35 +449,44 @@ function runOnscreenButtonsScript(xcode){
       commInput.value="";
     }
   };
-  var btn=document.createElement("button");
+  bcomm.appendChild(commInput);
+  btn=document.createElement("button");
   btn.type="button";
   btn.innerText="\u226b";
   btn.onclick=function(){
     if(commSend&&commInput.value)commSend(commInput);
     commInput.value="";
   };
-  var bcomm=document.createElement("div");
-  bcomm.className="comment-control";
-  bcomm.style.display="none";
-  bcomm.appendChild(commInput);
   bcomm.appendChild(btn);
+  btn=document.createElement("button");
+  btn.type="button";
+  btn.innerText="\u00a0";
+  var bmove=document.createElement("div");
+  bmove.className="move-comment-control";
+  bmove.style.display="none";
+  btn.onclick=function(){
+    if(bcomm.classList.contains("moved")){
+      bcomm.classList.remove("moved");
+      bmove.classList.remove("moved");
+    }else{
+      bcomm.classList.add("moved");
+      bmove.classList.add("moved");
+    }
+  };
+  bmove.appendChild(btn);
   setSendComment=function(f){
     bcomm.style.display=f?null:"none";
+    bmove.style.display=f?null:"none";
     commSend=f;
   };
   var removed=true;
   hideOnscreenButtons=function(hide){
+    var b=[bfull,bexit,blive,bminjk,bcomm,bmove];
     if(!removed&&hide){
-      vcont.removeChild(bfull);
-      vcont.removeChild(bexit);
-      if(blive)vcont.removeChild(blive);
-      vcont.removeChild(bcomm);
+      for(var i=0;i<b.length;i++){if(b[i])vcont.removeChild(b[i]);}
       removed=true;
     }else if(removed&&!hide){
-      vcont.appendChild(bfull);
-      vcont.appendChild(bexit);
-      if(blive)vcont.appendChild(blive);
-      vcont.appendChild(bcomm);
+      for(var i=0;i<b.length;i++){if(b[i])vcont.appendChild(b[i]);}
       removed=false;
     }
   };
@@ -471,11 +501,11 @@ var toggleJikkyo;
 
 function runJikkyoScript(commentHeight,commentDuration,replaceTag){
   var danmaku=null;
-  var comm=null;
+  var comm=document.getElementById("jikkyo-comm");
   var checkScrollID=0;
   var cbJikkyoOnscr=document.getElementById("cb-jikkyo-onscr");
   function onclickJikkyoOnscr(){
-    if(comm&&comm.style.visibility!="hidden"){
+    if(danmaku&&comm.style.visibility!="hidden"){
       var cbDatacast=document.getElementById("cb-datacast");
       if((!cbDatacast||!cbDatacast.checked)&&cbJikkyoOnscr.checked)danmaku.show();
       else danmaku.hide();
@@ -483,7 +513,7 @@ function runJikkyoScript(commentHeight,commentDuration,replaceTag){
   }
   cbJikkyoOnscr.onclick=onclickJikkyoOnscr;
   checkJikkyoDisplay=function(){
-    if(comm){
+    if(danmaku){
       var cbJikkyo=document.getElementById("cb-jikkyo");
       if(!cbJikkyo.checked){
         danmaku.hide();
@@ -492,9 +522,14 @@ function runJikkyoScript(commentHeight,commentDuration,replaceTag){
         if(!cbDatacast||!cbDatacast.checked){
           comm.style.display="none";
         }
+        setMinimizeJikkyo(null);
       }else{
         comm.style.visibility=null;
         comm.style.display=null;
+        setMinimizeJikkyo(function(){
+          if(comm.classList.contains("minimized"))comm.classList.remove("minimized");
+          else comm.classList.add("minimized");
+        });
         onclickJikkyoOnscr();
       }
     }
@@ -509,11 +544,6 @@ function runJikkyoScript(commentHeight,commentDuration,replaceTag){
       onJikkyoStreamError=null;
       checkJikkyoDisplay();
       return;
-    }
-    if(!comm){
-      comm=document.createElement("div");
-      comm.className="jikkyo-comments";
-      vfull.appendChild(comm);
     }
     if(!danmaku){
       danmaku=new Danmaku({
@@ -544,7 +574,7 @@ function runJikkyoScript(commentHeight,commentDuration,replaceTag){
         commHide=true;
       }else{
         var scroll=Math.abs(comm.scrollTop+comm.clientHeight-comm.scrollHeight)<comm.clientHeight/4;
-        //The top/bottom border of .jikkyo-comments must be 1px
+        //The top/bottom border of #jikkyo-comm must be 1px
         comm.style.height=vid.e.clientHeight-2+"px";
         if(commHide||scroll)comm.scrollTop=comm.scrollHeight;
         commHide=false;
@@ -791,6 +821,19 @@ function runVideoScript(aribb24UseSvg,aribb24Option,useDatacast,useJikkyoLog){
 }
 
 function runTranscodeScript(useDatacast,useLiveJikkyo,useJikkyoLog,ofssec,fast,postCommentQuery){
+  if(vid.c){
+    //Playback rate is controlled on client-side.
+    vid.fast=fast;
+    fast=1;
+  }else if(window.createMiscWasmModule){
+    setTimeout(function(){
+      createMiscWasmModule().then(function(mod){
+        //Functions for drawing thumbnails
+        vid.getGrabberInputBuffer=mod.getGrabberInputBuffer;
+        vid.grabFirstFrame=mod.grabFirstFrame;
+      });
+    },0);
+  }
   var openSubStream=function(){};
   if(useDatacast||useLiveJikkyo||useJikkyoLog){
     var onDataStream=null;
@@ -908,18 +951,48 @@ function runTranscodeScript(useDatacast,useLiveJikkyo,useJikkyoLog,ofssec,fast,p
     var vseek=document.getElementById("vid-seek");
     var vseekLeaved=true;
     var msList=[];
+    var vthumb=document.getElementById("vid-thumb");
+    var thumbTimer=null;
+    var thumbXhr=null;
     for(var i=0;i<=100;i++){
       msList[i]=vselect.options[i].textContent.match(/^(?:\d+m\d\ds)?/)[0];
     }
     vseek.onmouseleave=function(){
       vseekLeaved=true;
       document.getElementById("vid-seek-status").innerText="";
+      if(vthumb)vthumb.style.display="none";
     };
     vseek.oninput=function(){
       vseekLeaved=false;
       var sec=ofssec+Math.floor((vid.c||vid.e).currentTime*fast);
       var ms=Math.floor(sec/60)+"m"+String(100+sec%60).substring(1)+"s";
       document.getElementById("vid-seek-status").innerText=ms+"\u2192"+msList[vseek.value]+"|"+vseek.value+"%";
+      var m=document.getElementById("vidsrc").textContent.match(/\?fname=[^&]*/);
+      if(m&&vthumb&&vid.grabFirstFrame){
+        if(thumbTimer)clearTimeout(thumbTimer);
+        thumbTimer=setTimeout(function(){
+          if(vseekLeaved||thumbXhr)return;
+          //Get thumbnail of seek position.
+          thumbXhr=new XMLHttpRequest();
+          thumbXhr.open("GET","grabber.lua"+m[0]+"&offset="+vseek.value);
+          thumbXhr.responseType="arraybuffer";
+          thumbXhr.onloadend=function(){
+            if(!vseekLeaved&&thumbXhr.status==200&&thumbXhr.response){
+              var buffer=vid.getGrabberInputBuffer(thumbXhr.response.byteLength);
+              buffer.set(new Uint8Array(thumbXhr.response));
+              var frame=vid.grabFirstFrame(thumbXhr.response.byteLength);
+              if(frame){
+                vthumb.width=frame.width;
+                vthumb.height=frame.height;
+                vthumb.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(frame.buffer),frame.width,frame.height),0,0);
+                vthumb.style.display=null;
+              }
+            }
+            thumbXhr=null;
+          };
+          thumbXhr.send();
+        },thumbTimer?200:0);
+      }
     };
     vseek.onchange=function(){
       vselect.options[vseek.value].selected=true;
@@ -1037,13 +1110,11 @@ function runTsliveScript(aribb24UseSvg,aribb24Option){
   var lastWidth=vid.e.width;
   var lastHeight=vid.e.height;
   var wakeLock=null;
-  var modBufferSize=0;
   var seekParam="";
   function readNext(mod,reader,ret){
     if(ret&&ret.value){
       var inputLen=Math.min(ret.value.length,1e6);
-      //Limit input amount to reduce "Buffer overflow" console output.
-      var buffer=modBufferSize<14&&mod.getNextInputBuffer(inputLen);
+      var buffer=mod.getNextInputBuffer(inputLen);
       if(!buffer){
         setTimeout(function(){readNext(mod,reader,ret);},1000);
         return;
@@ -1149,6 +1220,9 @@ function runTsliveScript(aribb24UseSvg,aribb24Option){
   navigator.gpu.requestAdapter().then(function(adapter){
     adapter.requestDevice().then(function(device){
       createWasmModule({preinitializedWebGPUDevice:device}).then(function(mod){
+        //Functions for drawing thumbnails
+        vid.getGrabberInputBuffer=mod.getGrabberInputBuffer;
+        vid.grabFirstFrame=mod.grabFirstFrame;
         var statsTime=0;
         mod.setCaptionCallback(function(pts,ts,data){
           if(cap)cap.pushRawData(statsTime+ts,data.slice());
@@ -1170,7 +1244,6 @@ function runTsliveScript(aribb24UseSvg,aribb24Option){
           mod.setAudioGain(vid.volume);
         };
         mod.setStatsCallback(function(stats){
-          modBufferSize=stats[stats.length-1].InputBufferSize;
           if(statsTime!=stats[stats.length-1].time){
             vid.currentTime+=stats[stats.length-1].time-statsTime;
             statsTime=stats[stats.length-1].time;
@@ -1178,6 +1251,7 @@ function runTsliveScript(aribb24UseSvg,aribb24Option){
             if(cap)cap.onTimeupdate(statsTime);
           }
         });
+        if(vid.fast!=1)mod.setPlaybackRate(vid.fast);
         setTimeout(function(){
           vbitrate.innerText="|?Mbps";
           startRead(mod);
